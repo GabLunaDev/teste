@@ -29,14 +29,14 @@ resource script 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         'Content-Type'  = 'application/json'
       }
 
-      $armToken = (Get-AzAccessToken -ResourceUrl "${environment().resourceManager}").Token
+      $armToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com/").Token
       $armHeaders = @{
         'Authorization' = "Bearer $armToken"
         'Content-Type'  = 'application/json'
       }
 
       $subscriptionId = (Get-AzContext).Subscription.Id
-      $armEndpoint = (Get-AzEnvironment).ResourceManagerUrl.TrimEnd('/')
+      $armEndpoint = "https://management.azure.com"
       $providerUri = "$armEndpoint/subscriptions/$subscriptionId/providers/Microsoft.ContainerInstance/register?api-version=2021-04-01"
       Write-Host "Registering Microsoft.ContainerInstance provider..."
       $null = Invoke-RestMethod -Method Post -Uri $providerUri -Headers $armHeaders
