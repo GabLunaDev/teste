@@ -1,0 +1,25 @@
+{
+  "Name": "Resource Insights Reader",
+  "IsCustom": true,
+  "Description": "Permite leitura de recursos e métricas para análise e recomendações.",
+  "Actions": [
+    "Microsoft.Resources/subscriptions/resourceGroups/read",
+    "Microsoft.Resources/subscriptions/resourceGroups/resources/read",
+    "Microsoft.Resources/deployments/read",
+    "Microsoft.Insights/*/read",
+    "Microsoft.Compute/*/read",
+    "Microsoft.Network/*/read",
+    "Microsoft.Storage/*/read",
+    "Microsoft.Web/*/read",
+    "Microsoft.ContainerService/*/read",
+    "Microsoft.Sql/*/read",
+    "Microsoft.KeyVault/vaults/read",
+    "Microsoft.OperationalInsights/*/read",
+    "Microsoft.Authorization/roleAssignments/read",
+    "Microsoft.Support/*/read"
+  ],
+  "NotActions": [],
+  "AssignableScopes": [
+    "/subscriptions/00000000-0000-0000-0000-000000000000"
+  ]
+}
