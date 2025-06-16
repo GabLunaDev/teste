@@ -2,7 +2,7 @@ param name string
 param location string = resourceGroup().location
 param currentTime string = utcNow()
 param customRoleName string
-param roleAssignmentName string = guid(customRoleName, name, subscription().subscriptionId) // Unique name for the role assignment
+param roleAssignmentName string = guid(customRoleName, name, subscription().subscriptionId)
 
 var subscriptionId = subscription().subscriptionId
 var roleDefinitionGuid = guid('${subscriptionId}/${customRoleName}')
