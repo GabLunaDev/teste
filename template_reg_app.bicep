@@ -1,7 +1,11 @@
 param name string
 param location string = resourceGroup().location
 param currentTime string = utcNow()
-param customRoleDefinitionUri string
+param customRoleName string
+param roleAssignmentName string = guid(customRoleName, name, subscription().subscriptionId) // Unique name for the role assignment
+
+var subscriptionId = subscription().subscriptionId
+var roleDefinitionGuid = guid('${subscriptionId}/${customRoleName}')
 
 resource script 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   name: name
@@ -25,14 +29,15 @@ resource script 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
         'Content-Type'  = 'application/json'
       }
 
-      $armToken = (Get-AzAccessToken -ResourceUrl "https://management.azure.com/").Token
+      $armToken = (Get-AzAccessToken -ResourceUrl "${environment().resourceManager}").Token
       $armHeaders = @{
         'Authorization' = "Bearer $armToken"
         'Content-Type'  = 'application/json'
       }
 
       $subscriptionId = (Get-AzContext).Subscription.Id
-      $providerUri = "https://management.azure.com/subscriptions/$subscriptionId/providers/Microsoft.ContainerInstance/register?api-version=2021-04-01"
+      $armEndpoint = (Get-AzEnvironment).ResourceManagerUrl.TrimEnd('/')
+      $providerUri = "$armEndpoint/subscriptions/$subscriptionId/providers/Microsoft.ContainerInstance/register?api-version=2021-04-01"
       Write-Host "Registering Microsoft.ContainerInstance provider..."
       $null = Invoke-RestMethod -Method Post -Uri $providerUri -Headers $armHeaders
 
@@ -90,58 +95,45 @@ resource script 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   }
 }
 
-resource assignRoleScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
-  name: 'assign-custom-role-to-sp'
-  location: location
-  kind: 'AzurePowerShell'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${resourceId('app-reg-automation', 'Microsoft.ManagedIdentity/userAssignedIdentities', 'AppRegCreator')}': {}
-    }
-  }
-  dependsOn: [
-    script
-  ]
+resource customRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
+  name: roleDefinitionGuid
   properties: {
-    azPowerShellVersion: '5.0'
-    arguments: '''
-      -resourceName "${name}" `
-      -principalId "${script.properties.outputs.principalId}" `
-      -customRoleDefinitionUri "${customRoleDefinitionUri}" `
-      -subscriptionId "${subscription().subscriptionId}"
-    '''
-    scriptContent: '''
-      param (
-        [string] $resourceName,
-        [string] $principalId,
-        [string] $customRoleDefinitionUri,
-        [string] $subscriptionId
-      )
-
-      Write-Host "Downloading custom role definition from $customRoleDefinitionUri"
-      $roleDefinitionJson = Invoke-RestMethod -Uri $customRoleDefinitionUri
-
-      $roleDefinitionJson.AssignableScopes = @("/subscriptions/$subscriptionId")
-
-      $existing = az role definition list --name $roleDefinitionJson.Name | ConvertFrom-Json
-      if (-not $existing) {
-        Write-Host "Creating custom role: $($roleDefinitionJson.Name)"
-        $tempPath = "$env:TEMP\\custom-role.json"
-        $roleDefinitionJson | ConvertTo-Json -Depth 10 | Out-File -FilePath $tempPath -Encoding utf8
-        az role definition create --role-definition $tempPath
-      } else {
-        Write-Host "Role already exists: $($roleDefinitionJson.Name)"
+    roleName: customRoleName
+    description: 'Permite leitura de recursos e métricas para análise e recomendações.'
+    type: 'CustomRole'
+    permissions: [
+      {
+        actions: [
+          'Microsoft.Resources/subscriptions/resourceGroups/read'
+          'Microsoft.Resources/subscriptions/resourceGroups/resources/read'
+          'Microsoft.Resources/deployments/read'
+          'Microsoft.Insights/*/read'
+          'Microsoft.Compute/*/read'
+          'Microsoft.Network/*/read'
+          'Microsoft.Storage/*/read'
+          'Microsoft.Web/*/read'
+          'Microsoft.ContainerService/*/read'
+          'Microsoft.Sql/*/read'
+          'Microsoft.KeyVault/vaults/read'
+          'Microsoft.OperationalInsights/*/read'
+          'Microsoft.Authorization/roleAssignments/read'
+          'Microsoft.Support/*/read'
+        ]
+        notActions: []
       }
+    ]
+    assignableScopes: [
+      '/subscriptions/${subscriptionId}'
+    ]
+  }
+}
 
-      Write-Host "Assigning role $($roleDefinitionJson.Name) to $principalId"
-      az role assignment create --assignee-object-id $principalId `
-                                --role "$($roleDefinitionJson.Name)" `
-                                --scope "/subscriptions/$subscriptionId"
-    '''
-    cleanupPreference: 'OnSuccess'
-    retentionInterval: 'P1D'
-    forceUpdateTag: currentTime
+resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: roleAssignmentName 
+  properties: {
+    roleDefinitionId: customRole.id
+    principalId: script.properties.outputs.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -150,3 +142,10 @@ output clientId string = script.properties.outputs.clientId
 output clientSecret string = script.properties.outputs.clientSecret
 output principalId string = script.properties.outputs.principalId
 output currentSubscriptionId string = subscription().subscriptionId
+
+output customRoleId string = customRole.id
+output customRoleNameOutput string = customRole.properties.roleName
+output customRoleDescription string = customRole.properties.description
+output customRolePermissions array = customRole.properties.permissions
+output customRoleAssignableScopes array = customRole.properties.assignableScopes
+output roleAssignmentId string = roleAssignment.id
