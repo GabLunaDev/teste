@@ -123,13 +123,13 @@ resource customRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
       }
     ]
     assignableScopes: [
-      '/subscriptions/${subscriptionId}'
+      resourceGroup().id
     ]
   }
 }
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: roleAssignmentName 
+  name: roleAssignmentName
   properties: {
     roleDefinitionId: customRole.id
     principalId: script.properties.outputs.principalId
