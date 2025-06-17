@@ -3,20 +3,12 @@
   "IsCustom": true,
   "Description": "Permite leitura de recursos e métricas para análise e recomendações.",
   "Actions": [
+    "Microsoft.Compute/virtualMachines/read",
+    "Microsoft.Compute/disks/read",
+    "Microsoft.Sql/servers/databases/read",
+    "Microsoft.Storage/storageAccounts/read",
     "Microsoft.Resources/subscriptions/resourceGroups/read",
-    "Microsoft.Resources/subscriptions/resourceGroups/resources/read",
-    "Microsoft.Resources/deployments/read",
-    "Microsoft.Insights/*/read",
-    "Microsoft.Compute/*/read",
-    "Microsoft.Network/*/read",
-    "Microsoft.Storage/*/read",
-    "Microsoft.Web/*/read",
-    "Microsoft.ContainerService/*/read",
-    "Microsoft.Sql/*/read",
-    "Microsoft.KeyVault/vaults/read",
-    "Microsoft.OperationalInsights/*/read",
-    "Microsoft.Authorization/roleAssignments/read",
-    "Microsoft.Support/*/read"
+    "Microsoft.Resources/subscriptions/resources/read"
   ],
   "NotActions": [],
   "AssignableScopes": [

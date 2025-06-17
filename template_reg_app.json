@@ -5,27 +5,48 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "10309016197105208698"
+      "templateHash": "9220135471644317448"
     }
   },
   "parameters": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Nome da aplicação a ser criada."
+      }
     },
     "location": {
       "type": "string",
-      "defaultValue": "[resourceGroup().location]"
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Localização onde o recurso será implantado. Padrão: localização do resource group."
+      }
     },
     "currentTime": {
       "type": "string",
-      "defaultValue": "[utcNow()]"
+      "defaultValue": "[utcNow()]",
+      "metadata": {
+        "description": "Timestamp atual em UTC, utilizado para versionamento ou auditoria."
+      }
     },
     "customRoleName": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Nome da função personalizada (Custom Role) a ser atribuída."
+      }
+    },
+    "managedIdentity": {
+      "type": "string",
+      "metadata": {
+        "description": "Identidade gerenciada (Managed Identity) será utilizada como registrador da aplicação - Necessita ter função (Role) \"Owner\""
+      }
     },
     "roleAssignmentName": {
       "type": "string",
-      "defaultValue": "[guid(parameters('customRoleName'), parameters('name'), subscription().subscriptionId)]"
+      "defaultValue": "[guid(parameters('customRoleName'), parameters('name'), subscription().subscriptionId)]",
+      "metadata": {
+        "description": "Nome único para a atribuição de função, gerado a partir do nome da função, nome do recurso e ID da assinatura."
+      }
     }
   },
   "variables": {
@@ -42,7 +63,7 @@
       "identity": {
         "type": "UserAssigned",
         "userAssignedIdentities": {
-          "[format('{0}', resourceId('app-reg-automation', 'Microsoft.ManagedIdentity/userAssignedIdentities', 'AppRegCreator'))]": {}
+          "[format('{0}', resourceId(resourceGroup().name, 'Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentity')))]": {}
         }
       },
       "properties": {
@@ -65,20 +86,12 @@
         "permissions": [
           {
             "actions": [
+              "Microsoft.Compute/virtualMachines/read",
+              "Microsoft.Compute/disks/read",
+              "Microsoft.Sql/servers/databases/read",
+              "Microsoft.Storage/storageAccounts/read",
               "Microsoft.Resources/subscriptions/resourceGroups/read",
-              "Microsoft.Resources/subscriptions/resourceGroups/resources/read",
-              "Microsoft.Resources/deployments/read",
-              "Microsoft.Insights/*/read",
-              "Microsoft.Compute/*/read",
-              "Microsoft.Network/*/read",
-              "Microsoft.Storage/*/read",
-              "Microsoft.Web/*/read",
-              "Microsoft.ContainerService/*/read",
-              "Microsoft.Sql/*/read",
-              "Microsoft.KeyVault/vaults/read",
-              "Microsoft.OperationalInsights/*/read",
-              "Microsoft.Authorization/roleAssignments/read",
-              "Microsoft.Support/*/read"
+              "Microsoft.Resources/subscriptions/resources/read"
             ],
             "notActions": []
           }
@@ -116,37 +129,9 @@
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', parameters('name')), '2020-10-01').outputs.clientSecret]"
     },
-    "principalId": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.Resources/deploymentScripts', parameters('name')), '2020-10-01').outputs.principalId]"
-    },
-    "currentSubscriptionId": {
+    "subscriptionId": {
       "type": "string",
       "value": "[subscription().subscriptionId]"
-    },
-    "customRoleId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionGuid'))]"
-    },
-    "customRoleNameOutput": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionGuid')), '2022-04-01').roleName]"
-    },
-    "customRoleDescription": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionGuid')), '2022-04-01').description]"
-    },
-    "customRolePermissions": {
-      "type": "array",
-      "value": "[reference(resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionGuid')), '2022-04-01').permissions]"
-    },
-    "customRoleAssignableScopes": {
-      "type": "array",
-      "value": "[reference(resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionGuid')), '2022-04-01').assignableScopes]"
-    },
-    "roleAssignmentId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.Authorization/roleAssignments', parameters('roleAssignmentName'))]"
     }
   }
 }

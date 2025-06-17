@@ -1,7 +1,19 @@
+@description('Nome da aplicação a ser criada.')
 param name string
+
+@description('Localização onde o recurso será implantado. Padrão: localização do resource group.')
 param location string = resourceGroup().location
+
+@description('Timestamp atual em UTC, utilizado para versionamento ou auditoria.')
 param currentTime string = utcNow()
+
+@description('Nome da função personalizada (Custom Role) a ser atribuída.')
 param customRoleName string
+
+@description('Identidade gerenciada (Managed Identity) será utilizada como registrador da aplicação - Necessita ter função (Role) "Owner"')
+param managedIdentity string
+
+@description('Nome único para a atribuição de função, gerado a partir do nome da função, nome do recurso e ID da assinatura.')
 param roleAssignmentName string = guid(customRoleName, name, subscription().subscriptionId)
 
 var subscriptionId = subscription().subscriptionId
@@ -14,7 +26,7 @@ resource script 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${resourceId('app-reg-automation', 'Microsoft.ManagedIdentity/userAssignedIdentities', 'AppRegCreator')}': {}
+      '${resourceId(resourceGroup().name, 'Microsoft.ManagedIdentity/userAssignedIdentities', managedIdentity)}': {}
     }
   }
   properties: {
@@ -104,20 +116,12 @@ resource customRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
     permissions: [
       {
         actions: [
+          'Microsoft.Compute/virtualMachines/read'
+          'Microsoft.Compute/disks/read'
+          'Microsoft.Sql/servers/databases/read'
+          'Microsoft.Storage/storageAccounts/read'
           'Microsoft.Resources/subscriptions/resourceGroups/read'
-          'Microsoft.Resources/subscriptions/resourceGroups/resources/read'
-          'Microsoft.Resources/deployments/read'
-          'Microsoft.Insights/*/read'
-          'Microsoft.Compute/*/read'
-          'Microsoft.Network/*/read'
-          'Microsoft.Storage/*/read'
-          'Microsoft.Web/*/read'
-          'Microsoft.ContainerService/*/read'
-          'Microsoft.Sql/*/read'
-          'Microsoft.KeyVault/vaults/read'
-          'Microsoft.OperationalInsights/*/read'
-          'Microsoft.Authorization/roleAssignments/read'
-          'Microsoft.Support/*/read'
+          'Microsoft.Resources/subscriptions/resources/read'
         ]
         notActions: []
       }
@@ -140,12 +144,4 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 output objectId string = script.properties.outputs.objectId
 output clientId string = script.properties.outputs.clientId
 output clientSecret string = script.properties.outputs.clientSecret
-output principalId string = script.properties.outputs.principalId
-output currentSubscriptionId string = subscription().subscriptionId
-
-output customRoleId string = customRole.id
-output customRoleNameOutput string = customRole.properties.roleName
-output customRoleDescription string = customRole.properties.description
-output customRolePermissions array = customRole.properties.permissions
-output customRoleAssignableScopes array = customRole.properties.assignableScopes
-output roleAssignmentId string = roleAssignment.id
+output subscriptionId string = subscription().subscriptionId
