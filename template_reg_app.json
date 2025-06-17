@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "3293720131183508192"
+      "templateHash": "10309016197105208698"
     }
   },
   "parameters": {
@@ -84,7 +84,7 @@
           }
         ],
         "assignableScopes": [
-          "[format('/subscriptions/{0}', variables('subscriptionId'))]"
+          "[resourceGroup().id]"
         ]
       }
     },
